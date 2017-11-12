@@ -6,7 +6,7 @@
 // @namespace   cuzi
 // @oujs:author cuzi
 // @version     3
-// @license     GNUGPL
+// @license     GPL-3.0
 // @license     MIT
 // @include     https://*.bandcamp.com/*
 // @include     https://bandcamp.com/private/*
