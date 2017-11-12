@@ -7,7 +7,6 @@
 // @oujs:author cuzi
 // @version     3
 // @license     GPL-3.0
-// @license     MIT
 // @include     https://*.bandcamp.com/*
 // @include     https://bandcamp.com/private/*
 // @include     http://genius.com/new
