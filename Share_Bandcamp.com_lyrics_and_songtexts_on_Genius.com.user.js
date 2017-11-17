@@ -4,21 +4,24 @@
 // @updateURL   https://openuserjs.org/meta/cuzi/Share_Bandcamp.com_lyrics_and_songtexts_on_Genius.com.meta.js
 // @homepageURL https://openuserjs.org/scripts/cuzi/Share_Bandcamp.com_lyrics_and_songtexts_on_Genius.com
 // @namespace   cuzi
-// @oujs:author cuzi
-// @version     3
+// @version     4
 // @license     GPL-3.0
 // @include     https://*.bandcamp.com/*
 // @include     https://bandcamp.com/private/*
 // @include     http://genius.com/new
 // @include     https://genius.com/new
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js
+// @require     https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
 // @grant       GM_openInTab
 // @grant       GM_setValue
 // @grant       GM_getValue
 // @grant       unsafeWindow
+// @grant       GM.openInTab
+// @grant       GM.setValue
+// @grant       GM.getValue
 // ==/UserScript==
 
-(function() {
+(async function() {
 "use strict";
 
 var sid = 0;
@@ -31,7 +34,7 @@ function bc_start() {
   }
 }
 
-function bc_openGenius(ev) {
+async function bc_openGenius(ev) {
   // License
   if($("#license")) {
     if(!confirm("You need to respect the license of this work.\nIf in doubt, ask the copyright proprietor.\nShort version of the license:\n\n"+$.trim($("#license").text())+"\n\nMore info here:\n"+$("#license a").attr("href")+"\n\nOk?")) {
@@ -44,20 +47,20 @@ function bc_openGenius(ev) {
   var tr_song = tr_lyrics.prev("tr");
   
   // Initiate handshake
-  GM_setValue("g_acknowledgement", 0); // Receive acknowledgement here
-  GM_setValue("bc_waiting",true); // Request acknowledgement
+  await GM.setValue("g_acknowledgement", 0); // Receive acknowledgement here
+  await GM.setValue("bc_waiting",true); // Request acknowledgement
   
   // Open tab 
-  GM_openInTab("http://genius.com/new", false);
+  GM.openInTab("http://genius.com/new", false);
     
   // Wait for acknowledgement of handshake:
-  var iv = window.setInterval(function() {
-    sid = GM_getValue("g_acknowledgement", 0);
+  var iv = window.setInterval(async function() {
+    sid = await GM.getValue("g_acknowledgement", 0);
     if(sid) {
       clearInterval(iv);
       bc_sendData(tr_lyrics, tr_song);
       // Clean up:
-      GM_setValue("g_acknowledgement", 0);
+      GM.setValue("g_acknowledgement", 0);
     }
   },100);
 }
@@ -86,7 +89,7 @@ function bc_sendData(tr_lyrics, tr_song) {
     "albumart" : $(".popupImage").get(0).href
   };
   
-  GM_setValue("bc_data",JSON.stringify({
+  GM.setValue("bc_data",JSON.stringify({
     "sid" : sid,
     "direct" : direct,
     "other" : other
@@ -96,12 +99,12 @@ function bc_sendData(tr_lyrics, tr_song) {
 
 
 
-function g_start() {
+async function g_start() {
   // Wait for a first message/handshake from bandcamp
-  if(GM_getValue("bc_waiting", false)) {
+  if(await GM.getValue("bc_waiting", false)) {
     sid = 1+Math.random();
-    GM_setValue("bc_waiting", false); // Clean up
-    GM_setValue("g_acknowledgement", sid); // Send acknowledgement
+    await GM.setValue("bc_waiting", false); // Clean up
+    await GM.setValue("g_acknowledgement", sid); // Send acknowledgement
     // Start receiving data
     g_receiveData();
   }
@@ -109,15 +112,15 @@ function g_start() {
 
 function g_receiveData() {
   // Wait for the data from bandcamp
-  var iv = window.setInterval(function() {
-    var response = JSON.parse(GM_getValue("bc_data", "{}"));
+  var iv = window.setInterval(async function() {
+    var response = JSON.parse(await GM.getValue("bc_data", "{}"));
     if("sid" in response && response.sid == sid) {
       clearInterval(iv);
       
       g_fillForm(response);
       
       // Clean up
-      GM_setValue("bc_data", "{}");
+      GM.setValue("bc_data", "{}");
     }
   },100);
   
