@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name        Share Bandcamp.com lyrics and songtexts on Genius.com
 // @description Adds a link above the lyrics on bandcamp to share lyrics to genius.com. It then automatically copies all the available information (title, artist, release date, ...) to genius.com
-// @updateURL   https://openuserjs.org/meta/cuzi/Share_Bandcamp.com_lyrics_and_songtexts_on_Genius.com.meta.js
 // @homepageURL https://openuserjs.org/scripts/cuzi/Share_Bandcamp.com_lyrics_and_songtexts_on_Genius.com
 // @namespace   cuzi
-// @version     4
-// @license     GPL-3.0
+// @version     5
+// @license     GPL-3.0-or-later
+// @copyright   2016, cuzi (https://openuserjs.org/users/cuzi)
 // @include     https://*.bandcamp.com/*
 // @include     https://bandcamp.com/private/*
 // @include     http://genius.com/new
@@ -15,177 +15,181 @@
 // @grant       GM_openInTab
 // @grant       GM_setValue
 // @grant       GM_getValue
-// @grant       unsafeWindow
 // @grant       GM.openInTab
 // @grant       GM.setValue
 // @grant       GM.getValue
 // ==/UserScript==
 
-(async function() {
-"use strict";
+/* globals $, GM, TralbumData, KeyboardEvent */
 
-var sid = 0;
+(async function () {
+  'use strict'
 
-function bc_start() {
+  let sid = 0
+
+  function fixRelativeLinks (html) {
+    return html.replace('href="/', 'target="_blank" href="' + document.location.origin + '/')
+  }
+
+  function bandcampStart () {
   // Add links to lyrics info
-  var lyricsdiv = document.querySelectorAll(".collapsibleLyrics.lyricsText");
-  for(var i = 0; i < lyricsdiv.length; i++) {
-      var a = $('<div><a href="#genius">Share on genius.com</a></div>').click(bc_openGenius).prependTo(lyricsdiv[i].parentNode);
+    const lyricsdiv = document.querySelectorAll('.lyricsText,.lyricsRow>td>div')
+    for (let i = 0; i < lyricsdiv.length; i++) {
+      $('<div><a href="#genius">Share on genius.com</a></div>').click(bandcampOpenGenius).insertBefore(lyricsdiv[i])
+    }
   }
-}
 
-async function bc_openGenius(ev) {
+  async function bandcampOpenGenius (ev) {
   // License
-  if($("#license")) {
-    if(!confirm("You need to respect the license of this work.\nIf in doubt, ask the copyright proprietor.\nShort version of the license:\n\n"+$.trim($("#license").text())+"\n\nMore info here:\n"+$("#license a").attr("href")+"\n\nOk?")) {
-      return;
+    if ($('#license')) {
+      const more = $('#license a').attr('href') ? ('More info here:\n' + $('#license a').attr('href') + '\n\n') : ''
+      if (!window.confirm('You need to respect the license of this work.\nIf in doubt, ask the copyright proprietor.\nShort version of the license:\n\n' + $.trim($('#license').text()) + '\n\n' + more + 'Ok?')) {
+        return
+      }
     }
-  }
-  
-  // Identify song
-  var tr_lyrics = $(this.parentNode.parentNode);
-  var tr_song = tr_lyrics.prev("tr");
-  
-  // Initiate handshake
-  await GM.setValue("g_acknowledgement", 0); // Receive acknowledgement here
-  await GM.setValue("bc_waiting",true); // Request acknowledgement
-  
-  // Open tab 
-  GM.openInTab("http://genius.com/new", false);
-    
-  // Wait for acknowledgement of handshake:
-  var iv = window.setInterval(async function() {
-    sid = await GM.getValue("g_acknowledgement", 0);
-    if(sid) {
-      clearInterval(iv);
-      bc_sendData(tr_lyrics, tr_song);
-      // Clean up:
-      GM.setValue("g_acknowledgement", 0);
-    }
-  },100);
-}
 
-function bc_sendData(tr_lyrics, tr_song) {
+    // Identify song
+    const trLyrics = $(this.nextElementSibling)
+
+    // Initiate handshake
+    await GM.setValue('g_acknowledgement', 0) // Receive acknowledgement here
+    await GM.setValue('bc_waiting', true) // Request acknowledgement
+
+    // Open tab
+    GM.openInTab('http://genius.com/new', false)
+
+    // Wait for acknowledgement of handshake:
+    const iv = window.setInterval(async function () {
+      sid = await GM.getValue('g_acknowledgement', 0)
+      if (sid) {
+        clearInterval(iv)
+        bandcampSendData(trLyrics)
+        // Clean up:
+        GM.setValue('g_acknowledgement', 0)
+      }
+    }, 100)
+  }
+
+  function bandcampSendData (trLyrics) {
   // Collect data and send to genius window
+    const releaseDate = new Date(TralbumData.album_release_date || TralbumData.current.release_date)
+    let songTitle = ''
+    if (trLyrics[0].classList.contains('lyricsText')) {
+      // track page
+      songTitle = $.trim($('#name-section .trackTitle').text())
+    } else {
+      // album page
+      songTitle = $.trim($(trLyrics[0].parentNode.parentNode).prev('tr').find('.track-title').text())
+    }
 
-  var releaseDate = new Date(unsafeWindow.TralbumData.album_release_date);
-  
-  var direct = {
-    "song_primary_artist" : unsafeWindow.TralbumData.artist,
-    "song_title" : $.trim(tr_song.find('*[itemprop="name"]').text()),
-    "song_lyrics" : $.trim(tr_lyrics.find(".lyricsText").text().replace(/\n\n/g, "\n")),
-    "song_featured_artists" : "",
-    "song_producer_artists" : "",
-    "song_writer_artists" : "",
-    "song_release_date_1i" : releaseDate.getFullYear(),
-    "song_release_date_2i" : releaseDate.getMonth()+1,
-    "song_release_date_3i" : releaseDate.getDate(),
-  };
-  var other = {
-    "album_name" : unsafeWindow.TralbumData.current.title,
-    "about" : $(".tralbumData.tralbum-about").html() || "",
-    "credits" : $(".tralbumData.tralbum-credits").html() || "",
-    "tags" : Array.map($(".tralbumData.tralbum-tags a"),e => e.text).join(", ") || "",
-    "albumart" : $(".popupImage").get(0).href
-  };
-  
-  GM.setValue("bc_data",JSON.stringify({
-    "sid" : sid,
-    "direct" : direct,
-    "other" : other
-  }));
-  
-}
+    const direct = {
+      song_primary_artist: TralbumData.artist,
+      song_title: songTitle,
+      song_lyrics: $.trim(trLyrics.text().replace(/\n\n/g, '\n')),
+      song_featured_artists: '',
+      song_producer_artists: '',
+      song_writer_artists: '',
+      song_release_date_1i: releaseDate.getFullYear(),
+      song_release_date_2i: releaseDate.getMonth() + 1,
+      song_release_date_3i: releaseDate.getDate()
+    }
+    const other = {
+      album_name: TralbumData.current.title,
+      about: fixRelativeLinks($('.tralbumData.tralbum-about').html() || ''),
+      credits: fixRelativeLinks($('.tralbumData.tralbum-credits').html() || ''),
+      tags: Array.map($('.tralbumData.tralbum-tags a'), e => e.text).join(', ') || '',
+      albumart: $('.popupImage').get(0).href
+    }
 
+    GM.setValue('bc_data', JSON.stringify({
+      sid: sid,
+      direct: direct,
+      other: other
+    }))
+  }
 
-
-async function g_start() {
+  async function geniusStart () {
   // Wait for a first message/handshake from bandcamp
-  if(await GM.getValue("bc_waiting", false)) {
-    sid = 1+Math.random();
-    await GM.setValue("bc_waiting", false); // Clean up
-    await GM.setValue("g_acknowledgement", sid); // Send acknowledgement
-    // Start receiving data
-    g_receiveData();
+    if (await GM.getValue('bc_waiting', false)) {
+      sid = 1 + Math.random()
+      await GM.setValue('bc_waiting', false) // Clean up
+      await GM.setValue('g_acknowledgement', sid) // Send acknowledgement
+      // Start receiving data
+      geniusReceiveData()
+    }
   }
-}
 
-function g_receiveData() {
+  function geniusReceiveData () {
   // Wait for the data from bandcamp
-  var iv = window.setInterval(async function() {
-    var response = JSON.parse(await GM.getValue("bc_data", "{}"));
-    if("sid" in response && response.sid == sid) {
-      clearInterval(iv);
-      
-      g_fillForm(response);
-      
-      // Clean up
-      GM.setValue("bc_data", "{}");
-    }
-  },100);
-  
-  // Click on "Add album" to generate a new album input field
-  var evt = document.createEvent("MouseEvents");
-  evt.initEvent("click", true, true);
-  document.getElementById("add_album_name").dispatchEvent(evt);
-}
+    const iv = window.setInterval(async function () {
+      const response = JSON.parse(await GM.getValue('bc_data', '{}'))
+      if ('sid' in response && response.sid === sid) {
+        clearInterval(iv)
 
-function g_fillForm(rsp) {
+        geniusFillForm(response)
+
+        // Clean up
+        GM.setValue('bc_data', '{}')
+      }
+    }, 100)
+
+    // Click on "Add album" to generate a new album input field
+    const evt = document.createEvent('MouseEvents')
+    evt.initEvent('click', true, true)
+    document.getElementById('add_album_name').dispatchEvent(evt)
+  }
+
+  function geniusFillForm (rsp) {
   // Directly enter data by id
-  for(var id in rsp.direct) {
-    $(document.getElementById(id)).val(rsp.direct[id]);
-  }
-  
-  // Create keyup event on song name, to generate the warning about duplicates
-
-    var evt = document.createEvent("KeyboardEvent");
-    evt.initKeyEvent ("keyup", true, true, window, 0, 0, 0, 0, 0, "e".charCodeAt(0)) 
-    document.getElementById("song_primary_artist").dispatchEvent(evt);
-
-  
-  // Album name
-  $(".album_name.add_album input").first().val(rsp.other.album_name);
-  
-  // Tags
-  $("<div><b>Tags:</b><br>" +  rsp.other.tags + '<div style="position:absolute;font-size:xx-small;color:green;top:-5px; right:0px;">bandcamp info</div></div>').css({
-    position:"absolute",
-    left : 0,
-    top : $(".primary_tag_chooser").offset().top,
-    maxWidth: (($(document.body).width() - $("#container").width() - 15) / 2),
-    background: "#DDB",
-    color: "black",
-    padding: "5px"
-  }).appendTo(document.body);
-  
-  // Credits & About & Song title
-  var credits = $("<div><b>Title:</b><br>" + rsp.direct.song_title + "<br><b>Credits:</b><div>" +  rsp.other.credits + "</div><b>About:</b><div>" +  rsp.other.about + '</div><div style="position:absolute;font-size:xx-small;color:green;top:-5px; right:0px;">bandcamp info</div></div>').css({
-    position:"absolute",
-    left : 0,
-    top : $(".add_song_page-header:contains('Meta')").offset().top,
-    maxWidth: (($(document.body).width() - $("#container").width() - 30) / 2),
-    maxHeight: 500,
-    overflow:"auto",
-    background: "#DDB",
-    color: "black",
-    padding: "5px"
-  }).appendTo(document.body);
-  
-  // Reposition credits on lyrics change
-  var $song_lyrics = $("#song_lyrics");
-  var oldheight = $song_lyrics.height();
-  $song_lyrics.change(function() {
-    if($song_lyrics.height() != oldheight) {
-      oldheight = $song_lyrics.height();
-      credits.css("top",$(".add_song_page-header:contains('Meta')").offset().top);
+    for (const id in rsp.direct) {
+      $(document.getElementById(id)).val(rsp.direct[id])
     }
-  });
-  
-}
 
+    // Create keyup event on song name, to generate the warning about duplicates
+    const evt = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'e', char: 'e' })
+    document.getElementById('song_primary_artist').dispatchEvent(evt)
 
-  if(document.location.href.endsWith("genius.com/new")) {
-    window.setTimeout(g_start,1000);
-  } else if(unsafeWindow.TralbumData) {
-    window.setTimeout(bc_start,1000);
+    // Album name
+    $('.album_name.add_album input').first().val(rsp.other.album_name)
+
+    // Tags
+    $('<div><b>Tags:</b><br>' + rsp.other.tags + '<div style="position:absolute;font-size:xx-small;color:green;top:-5px; right:0px;">bandcamp info</div></div>').css({
+      position: 'absolute',
+      left: 0,
+      top: $('.primary_tag_chooser').offset().top,
+      maxWidth: (($(document.body).width() - $('#container').width() - 15) / 2),
+      background: '#DDB',
+      color: 'black',
+      padding: '5px'
+    }).appendTo(document.body)
+
+    // Credits & About & Song title
+    const credits = $('<div><b>Title:</b><br>' + rsp.direct.song_title + '<br><b>Credits:</b><div>' + rsp.other.credits + '</div><b>About:</b><div>' + rsp.other.about + '</div><b>Tags:</b><br>' + rsp.other.tags + '<div style="position:absolute;font-size:xx-small;color:green;top:-5px; right:0px;">bandcamp info</div></div>').css({
+      position: 'absolute',
+      left: 0,
+      top: $(".add_song_page-header:contains('Meta')").offset().top,
+      maxWidth: (($(document.body).width() - $('#container').width() - 30) / 2),
+      maxHeight: 500,
+      overflow: 'auto',
+      background: '#DDB',
+      color: 'black',
+      padding: '5px'
+    }).appendTo(document.body)
+
+    // Reposition credits on lyrics change
+    const $songLyrics = $('#song_lyrics')
+    let oldheight = $songLyrics.height()
+    $songLyrics.change(function () {
+      if ($songLyrics.height() !== oldheight) {
+        oldheight = $songLyrics.height()
+        credits.css('top', $(".add_song_page-header:contains('Meta')").offset().top)
+      }
+    })
   }
-})();
+
+  if (document.location.href.endsWith('genius.com/new')) {
+    window.setTimeout(geniusStart, 500)
+  } else if (TralbumData) {
+    window.setTimeout(bandcampStart, 500)
+  }
+})()
