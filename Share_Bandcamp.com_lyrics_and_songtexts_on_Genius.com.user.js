@@ -85,7 +85,7 @@
     const direct = {
       song_primary_artist: TralbumData.artist,
       song_title: songTitle,
-      song_lyrics: $.trim(trLyrics.text().replace(/\n\n/g, '\n').replace(/ +$/gm, '').replace(/[´‘’‛❛❜՚ߴߵ＇]([dlmrstv])/g, "'$1")),
+      song_lyrics: $.trim(trLyrics.text().replace(/\n{3}/g, '\n\n').replace(/ +$/gm, '').replace(/[´‘’‛❛❜՚ߴߵ＇]([dlmrstv])/g, "'$1")),
       song_featured_artists: '',
       song_producer_artists: '',
       song_writer_artists: '',
