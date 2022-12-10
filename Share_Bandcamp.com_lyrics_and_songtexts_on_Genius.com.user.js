@@ -3,7 +3,7 @@
 // @description Adds a link above the lyrics on bandcamp to share lyrics to genius.com. It then automatically copies all the available information (title, artist, release date, ...) to genius.com
 // @homepageURL https://openuserjs.org/scripts/cuzi/Share_Bandcamp.com_lyrics_and_songtexts_on_Genius.com
 // @namespace   cuzi
-// @version     7
+// @version     8
 // @license     GPL-3.0-or-later
 // @copyright   2016, cuzi (https://openuserjs.org/users/cuzi)
 // @include     https://*.bandcamp.com/*
@@ -33,7 +33,7 @@
 
   function bandcampStart () {
   // Add links to lyrics info
-    const lyricsdiv = document.querySelectorAll('.lyricsText,.lyricsRow>td>div')
+    const lyricsdiv = document.querySelectorAll('.lyricsText,.lyricsRow>td>div,.tralbumData.tralbum-about')
     for (let i = 0; i < lyricsdiv.length; i++) {
       $('<div><a href="#genius">Share on genius.com</a></div>').click(bandcampOpenGenius).insertBefore(lyricsdiv[i])
     }
@@ -74,9 +74,12 @@
   // Collect data and send to genius window
     const releaseDate = new Date(TralbumData.album_release_date || TralbumData.current.release_date)
     let songTitle = ''
-    if (trLyrics[0].classList.contains('lyricsText')) {
+    if (trLyrics[0].classList.contains('lyricsText') || document.querySelector('#name-section .trackTitle')) {
       // track page
       songTitle = $.trim($('#name-section .trackTitle').text())
+      if (!songTitle) {
+        songTitle = $.trim($('#name-section .trackTitle').text())
+      }
     } else {
       // album page
       songTitle = $.trim($(trLyrics[0].parentNode.parentNode).prev('tr').find('.track-title').text())
@@ -85,7 +88,7 @@
     const direct = {
       song_primary_artist: TralbumData.artist,
       song_title: songTitle,
-      song_lyrics: $.trim(trLyrics.text().replace(/\n{3}/g, '\n\n').replace(/ +$/gm, '').replace(/[´‘’‛❛❜՚ߴߵ＇]([dlmrstv])/g, "'$1")),
+      song_lyrics: $.trim(trLyrics.text().replace(/[\n\r]{2}/g, '\n').replace(/ +$/gm, '').replace(/[´‘’‛❛❜՚ߴߵ＇]([dlmrstv])/g, "'$1")),
       song_featured_artists: '',
       song_producer_artists: '',
       song_writer_artists: '',
