@@ -3,7 +3,7 @@
 // @description Adds a link above the lyrics on bandcamp to share lyrics to genius.com. It then automatically copies all the available information (title, artist, release date, ...) to genius.com
 // @homepageURL https://openuserjs.org/scripts/cuzi/Share_Bandcamp.com_lyrics_and_songtexts_on_Genius.com
 // @namespace   cuzi
-// @version     9
+// @version     9.1
 // @license     GPL-3.0-or-later
 // @copyright   2016, cuzi (https://openuserjs.org/users/cuzi)
 // @match       https://*.bandcamp.com/*
@@ -191,7 +191,7 @@
 
   if (document.location.href.endsWith('genius.com/new')) {
     window.setTimeout(geniusStart, 500)
-  } else if (TralbumData) {
+  } else if (typeof TralbumData !== 'undefined') {
     window.setTimeout(bandcampStart, 500)
   }
 })()
