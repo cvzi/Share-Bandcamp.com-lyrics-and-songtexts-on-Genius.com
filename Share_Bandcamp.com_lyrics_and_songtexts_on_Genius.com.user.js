@@ -3,13 +3,13 @@
 // @description Adds a link above the lyrics on bandcamp to share lyrics to genius.com. It then automatically copies all the available information (title, artist, release date, ...) to genius.com
 // @homepageURL https://openuserjs.org/scripts/cuzi/Share_Bandcamp.com_lyrics_and_songtexts_on_Genius.com
 // @namespace   cuzi
-// @version     9.2
+// @version     9.3
 // @license     GPL-3.0-or-later
 // @copyright   2016, cuzi (https://openuserjs.org/users/cuzi)
 // @match       https://*.bandcamp.com/*
 // @match       https://bandcamp.com/*
 // @match       https://genius.com/new
-// @require     https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js
+// @require     https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js
 // @require     https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
 // @grant       GM_openInTab
 // @grant       GM_setValue
@@ -25,6 +25,7 @@
   'use strict'
 
   let sid = 0
+  let licenseShown = false
 
   function fixRelativeLinks (html) {
     return html.replace('href="/', 'target="_blank" href="' + document.location.origin + '/')
@@ -39,12 +40,13 @@
   }
 
   async function bandcampOpenGenius (ev) {
-  // License
-    if ($('#license')) {
+    // License
+    if (!licenseShown && $('#license')) {
       const more = $('#license a').attr('href') ? ('More info here:\n' + $('#license a').attr('href') + '\n\n') : ''
       if (!window.confirm('You need to respect the license of this work.\nIf in doubt, ask the copyright proprietor.\nShort version of the license:\n\n' + $.trim($('#license').text()) + '\n\n' + more + 'Ok?')) {
         return
       }
+      licenseShown = true
     }
 
     // Identify song
@@ -87,7 +89,7 @@
     const direct = {
       song_primary_artist: TralbumData.artist,
       song_title: songTitle,
-      song_lyrics: $.trim(trLyrics.text().replace(/[\n\r]{2}/g, '\n').replace(/ +$/gm, '').replace(/[´‘’‛❛❜՚ߴߵ＇]([dlmrstv])/g, "'$1")),
+      song_lyrics: $.trim(trLyrics.text().replace(/ +$/gm, '').replace(/[´‘’‛❛❜՚ߴߵ＇]([dlmrstv])/g, "'$1")),
       song_featured_artists: '',
       song_producer_artists: '',
       song_writer_artists: '',
