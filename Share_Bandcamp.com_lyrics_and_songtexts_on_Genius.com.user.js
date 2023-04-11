@@ -3,7 +3,7 @@
 // @description Adds a link above the lyrics on bandcamp to share lyrics to genius.com. It then automatically copies all the available information (title, artist, release date, ...) to genius.com
 // @homepageURL https://openuserjs.org/scripts/cuzi/Share_Bandcamp.com_lyrics_and_songtexts_on_Genius.com
 // @namespace   cuzi
-// @version     9.1
+// @version     9.2
 // @license     GPL-3.0-or-later
 // @copyright   2016, cuzi (https://openuserjs.org/users/cuzi)
 // @match       https://*.bandcamp.com/*
@@ -73,15 +73,15 @@
   // Collect data and send to genius window
     const releaseDate = new Date(TralbumData.album_release_date || TralbumData.current.release_date)
     let songTitle = ''
-    if (trLyrics[0].classList.contains('lyricsText') || document.querySelector('#name-section .trackTitle')) {
+    if (trLyrics[0].classList.contains('lyricsText')) {
       // track page
       songTitle = $.trim($('#name-section .trackTitle').text())
-      if (!songTitle) {
-        songTitle = $.trim($('#name-section .trackTitle').text())
-      }
     } else {
       // album page
       songTitle = $.trim($(trLyrics[0].parentNode.parentNode).prev('tr').find('.track-title').text())
+    }
+    if (!songTitle) {
+      songTitle = $.trim($('#name-section .trackTitle').text())
     }
 
     const direct = {
