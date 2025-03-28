@@ -3,7 +3,7 @@
 // @description Adds a link above the lyrics on bandcamp to share lyrics to genius.com. It then automatically copies all the available information (title, artist, release date, ...) to genius.com
 // @homepageURL https://openuserjs.org/scripts/cuzi/Share_Bandcamp.com_lyrics_and_songtexts_on_Genius.com
 // @namespace   cuzi
-// @version     9.3
+// @version     9.4
 // @license     GPL-3.0-or-later
 // @copyright   2016, cuzi (https://openuserjs.org/users/cuzi)
 // @match       https://*.bandcamp.com/*
@@ -87,7 +87,7 @@
     }
 
     const direct = {
-      song_primary_artist: TralbumData.artist,
+      song_primary_artists__name: TralbumData.artist,
       song_title: songTitle,
       song_lyrics: $.trim(trLyrics.text().replace(/ +$/gm, '').replace(/[´‘’‛❛❜՚ߴߵ＇]([dlmrstv])/g, "'$1")),
       song_featured_artists: '',
@@ -151,7 +151,7 @@
 
     // Create keyup event on song name, to generate the warning about duplicates
     const evt = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'e', char: 'e' })
-    document.getElementById('song_primary_artist').dispatchEvent(evt)
+    document.getElementById('song_primary_artists__name').dispatchEvent(evt)
 
     // Album name
     $('.album_name.add_album input').first().val(rsp.other.album_name)
